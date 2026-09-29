@@ -7,7 +7,8 @@ Published URL: https://whatsong-finder.paz-peter.chatgpt.site . Sites reported a
 ## What is implemented
 
 - Microphone capture and desktop browser-tab audio capture where supported (HTTPS required).
-- Audio/video selection, local decoding, waveform, start time, volume normalization and coupled speed/pitch control.
+- Audio/video selection, local decoding, waveform, precise start time, volume normalization and coupled speed/pitch control.
+- Local clip recovery: channel selection, optional rumble/hiss filters, signal checks, exact prepared previews and downloadable WAV clips. See [clip recovery](clip-recovery.md).
 - Mono 22,050 Hz WAV preparation, up to 12 seconds, in the visitor's browser. Full files are not uploaded.
 - Standard AudD recognition endpoint, direct-media URL recognition, listening links, automatic saving of matches.
 - Adjustable surveys and continuous scans across local files, with a request/coverage estimate before starting.

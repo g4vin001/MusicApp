@@ -19,6 +19,10 @@ The bundled Sites runtime serves the application with Vinext/Cloudflare Workers 
 
 Recognition accuracy is not yet measured. The [benchmark runner](docs/benchmark.md) validates a labeled corpus without calling the provider by default, and requires an explicit request ceiling for live experiments.
 
+## Clip recovery workbench
+
+Uploaded and recorded audio can be checked locally for silence, low level, clipping and stereo cancellation. Select a channel, adjust speed/volume, and try optional rumble/hiss filters. Preview, WAV download and single-clip identification use the same preparation function. Local tools remain available before recognition activation; timeline scans deliberately use original audio. See [clip processing notes](docs/clip-recovery.md).
+
 ## Important boundaries
 
 - No paid calls without a server-side provider key.
