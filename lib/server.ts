@@ -11,8 +11,12 @@ export async function identity(request:Request) {
  const owner=await digest(id);
  // Cloudflare overwrites CF-Connecting-IP at the edge. Never trust X-Forwarded-For.
  const ip=await digest(Math.floor(now()/86400)+':'+(request.headers.get('cf-connecting-ip')||'preview-shared'));
+ const configuredTesterKey=variable('TESTER_ACCESS_KEY').trim();
+ const suppliedTesterKey=(request.headers.get('x-tester-key')||'').trim();
+ const tester=!!configuredTesterKey && configuredTesterKey.length>=16 && suppliedTesterKey.length>=16
+  && await digest(configuredTesterKey)===await digest(suppliedTesterKey);
  const cookie=match?undefined:`ws_visitor=${id}; Path=/; HttpOnly; SameSite=Strict; Max-Age=31536000${new URL(request.url).protocol==='https:'?'; Secure':''}`;
- return {owner,ip,cookie};
+ return {owner,ip,cookie,tester};
 }
 export function json(body:unknown,status=200,cookie?:string) {
  const headers:Record<string,string>={'Content-Type':'application/json','Cache-Control':'no-store','X-Content-Type-Options':'nosniff'};
