@@ -9,11 +9,12 @@ import { SongCard } from '@/components/song-card';
 import { prepareClip } from '@/lib/audio';
 import { secondsLabel, type Configuration } from '@/lib/contracts';
 import { intervalCoverage, planScan, scanCSV, scanStats, timelineHits, type ScanAllowance, type ScanInput, type ScanJob, type ScanSummary, type ScanWindow } from '@/lib/scan';
+import { testerHeaders } from '@/lib/tester-client';
 
 type Props = { audio: AudioBuffer | null; sourceURL: string; fileHash: string; filename: string; configuration: Configuration | null; locked: boolean; onChooseFile: () => void; onBusyChange: (running: boolean) => void; onComplete: () => void };
 type JobResponse = { job: ScanJob; allowance: ScanAllowance };
 async function request<T>(url: string, options?: RequestInit): Promise<T> {
-  const response = await fetch(url, { ...options, signal: AbortSignal.timeout(35_000) });
+  const response = await fetch(url, { ...options, headers: testerHeaders(options?.headers), signal: AbortSignal.timeout(35_000) });
   const body = await response.json() as T & { error?: string };
   if (!response.ok || body.error) throw new Error(body.error || 'The scan service could not respond.');
   return body;
@@ -41,7 +42,7 @@ export function ScanWorkspace({ audio, sourceURL, fileHash, filename, configurat
   const [selected, setSelected] = useState<number | null>(null);
   const player = useRef<HTMLAudioElement>(null);
   const executing = useRef(false), stop = useRef(false), mounted = useRef(true);
-  const maxSamples = Math.min(20, configuration?.dailyLimit || 5);
+  const maxSamples = configuration?.tester ? 100 : Math.min(20, configuration?.dailyLimit || 5);
   const effectiveSamples = Math.min(samples, maxSamples);
   const durationMs = audio ? Math.min(1_200_000, Math.round(audio.duration * 1000)) : 0;
   const plan = useMemo(() => durationMs >= 2000 ? planScan(durationMs, mode, effectiveSamples) : [], [durationMs, mode, effectiveSamples]);
@@ -130,7 +131,7 @@ export function ScanWorkspace({ audio, sourceURL, fileHash, filename, configurat
   }
   const selectedSegment = job?.segments.find(s => s.index === selected);
   return <section className="section scan-workspace" id="scan" aria-label="Video song timeline">
-    <div className="section-head"><div><span className="eyebrow">Music throughout a recording</span><h2>Build a song timeline</h2></div><span className="pill"><AudioLines size={15}/>{remaining} free scans available</span></div>
+    <div className="section-head"><div><span className="eyebrow">Music throughout a recording</span><h2>Build a song timeline</h2></div><span className="pill"><AudioLines size={15}/>{configuration?.tester?'Unlimited tester scans':`${remaining} free scans available`}</span></div>
     <div className="scan-layout">
       <div className="panel scan-planner">
         <div className="row between"><h3>Plan a scan</h3><button className="btn ghost" onClick={onChooseFile} disabled={locked || loading}><FolderOpen size={16}/>{audio ? 'Change file' : 'Choose file'}</button></div>
@@ -140,10 +141,10 @@ export function ScanWorkspace({ audio, sourceURL, fileHash, filename, configurat
           {mode === 'survey' && <div className="scan-samples"><label htmlFor="scan-samples" className="field-label">Up to {effectiveSamples} sections</label><Slider id="scan-samples" aria-label="Number of survey sections" min={1} max={Math.max(2, maxSamples)} step={1} value={[effectiveSamples]} onValueChange={v => setSamples(Math.min(v[0], maxSamples))} disabled={locked || loading || maxSamples < 2}/></div>}
           <div className="coverage-rail planned" aria-label={`Planned coverage: ${Math.round(intervalCoverage(plan) / durationMs * 100)} percent`}>{plan.map(w => <span key={w.index} style={{ left: `${100 * w.startMs / durationMs}%`, width: `${100 * (w.endMs - w.startMs) / durationMs}%` }}/>)}</div><div className="row between micro muted"><span>0:00</span><span>{label(durationMs)}</span></div>
           <dl className="scan-estimate"><div><dt>Maximum scans</dt><dd>{plan.length}</dd></div><div><dt>Audio to check</dt><dd>{label(intervalCoverage(plan))} <span>of {label(durationMs)}</span></dd></div></dl>
-          {plan.length > remaining && <p className="scan-warning" role="status">This plan needs {plan.length} scans; {remaining} are available. {mode === 'continuous' ? 'Choose a survey or a shorter recording.' : 'Reduce the section count or return when the allowance recovers.'}</p>}
+          {!configuration?.tester && plan.length > remaining && <p className="scan-warning" role="status">This plan needs {plan.length} scans; {remaining} are available. {mode === 'continuous' ? 'Choose a survey or a shorter recording.' : 'Reduce the section count or return when the allowance recovers.'}</p>}
           {!configuration?.recognition && <p className="small muted">Audio matching is awaiting activation. You can inspect the scan plan now.</p>}
           {!fileHash && <p className="small muted">Open this site over HTTPS to start or resume a scan. Clip previews and planning are available here.</p>}
-          <button className="btn full" onClick={start} disabled={locked || loading || !fileHash || !configuration?.recognition || !plan.length || plan.length > remaining}><Play size={16}/>{loading && !running ? 'Saving plan…' : `Start · up to ${plan.length} scans`}</button>
+          <button className="btn full" onClick={start} disabled={locked || loading || !fileHash || !configuration?.recognition || !plan.length || (!configuration?.tester && plan.length > remaining)}><Play size={16}/>{loading && !running ? 'Saving plan…' : `Start · up to ${plan.length} scans`}</button>
           <p className="micro muted">Cached results and silence do not use a scan. No-match and failed provider requests can. The shared allowance is checked before each section.</p>
         </> : <div className="scan-placeholder"><AudioLines size={30}/><p>Choose an audio or video file to see exactly how much will be checked before you start.</p><p className="small muted">Up to 40 MB and 20 minutes, depending on your browser's audio support.</p></div>}
       </div>

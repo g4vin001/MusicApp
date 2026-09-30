@@ -5,18 +5,24 @@ import type { ScanAllowance, ScanResult } from './scan';
 export class RecognitionError extends Error {
   constructor(public code: string, public status: number, message: string) { super(message); }
 }
-export function recognitionReady() {
+
+const TESTER_ALLOWANCE = 1_000_000;
+
+export function recognitionReady(tester = false) {
   const token = variable('AUDD_API_TOKEN').trim();
-  return !!token && token !== 'test' && intVariable('GLOBAL_DAILY_SCAN_LIMIT', 100, 10000) > 0 && intVariable('TOTAL_SCAN_LIMIT', 300, 1000000) > 0;
+  if (!token || token === 'test') return false;
+  if (tester) return true;
+  return intVariable('GLOBAL_DAILY_SCAN_LIMIT', 100, 10000) > 0 && intVariable('TOTAL_SCAN_LIMIT', 300, 1000000) > 0;
 }
 export async function totalBudgetRemaining() {
   const row = await db().prepare("SELECT used FROM recognition_meter WHERE id='global'").first<{ used: number }>();
   return Math.max(0, intVariable('TOTAL_SCAN_LIMIT', 300, 1000000) - (row?.used || 0));
 }
-export function assertRecognitionReady() {
-  if (!recognitionReady()) throw new RecognitionError('PROVIDER_NOT_CONFIGURED', 503, 'Audio identification is awaiting activation. You can prepare a clip or plan a scan.');
+export function assertRecognitionReady(tester = false) {
+  if (!recognitionReady(tester)) throw new RecognitionError('PROVIDER_NOT_CONFIGURED', 503, 'Audio identification is awaiting activation. You can prepare a clip or plan a scan.');
 }
-export async function allowance(owner: string, ip: string): Promise<ScanAllowance> {
+export async function allowance(owner: string, ip: string, tester = false): Promise<ScanAllowance> {
+  if (tester) return { limit: TESTER_ALLOWANCE, remaining: TESTER_ALLOWANCE };
   const counts = await db().prepare(`SELECT COUNT(*) AS total,
     COALESCE(SUM(CASE WHEN owner=? THEN 1 ELSE 0 END),0) AS visitor,
     COALESCE(SUM(CASE WHEN ip=? THEN 1 ELSE 0 END),0) AS network
@@ -39,8 +45,8 @@ function providerFailure(error: unknown) {
   return { error: 'Recognition did not finish. This request will not be sent again automatically.', code: 'PROVIDER_UNAVAILABLE', status: 503, providerCalls: 1 };
 }
 
-export async function recognize(input: RecognitionInput, who: { owner: string; ip: string }, requestId: string, sampleAt = 0): Promise<ScanResult> {
-  assertRecognitionReady();
+export async function recognize(input: RecognitionInput, who: { owner: string; ip: string; tester?: boolean }, requestId: string, sampleAt = 0): Promise<ScanResult> {
+  assertRecognitionReady(!!who.tester);
   const hash = await digest(input.file ? await input.file.arrayBuffer() : input.url || '');
   const operation = who.owner + ':' + requestId;
   const existing = await db().prepare('SELECT digest,response FROM operations WHERE id=?').bind(operation).first<{ digest: string; response: string | null }>();
@@ -58,9 +64,21 @@ export async function recognize(input: RecognitionInput, who: { owner: string; i
     if (song) await saveSong(who.owner, song, song.id);
     return { song, cached: true, provider: 'audd', providerCalls: 0, latencyMs: 0 };
   }
-  const accepted = await reserve({ id: operation, kind: 'recognize', owner: who.owner, ip: who.ip, digest: hash,
-    global: intVariable('GLOBAL_DAILY_SCAN_LIMIT', 100, 10000), user: intVariable('VISITOR_DAILY_SCAN_LIMIT', 5, 200), perIP: intVariable('IP_DAILY_SCAN_LIMIT', 20, 500), window: 86400 });
-  if (!accepted) throw new RecognitionError('QUOTA_EXCEEDED', 429, 'The free allowance or shared site budget is used up. Saved progress is kept. Personal allowances recover over 24 hours; the site budget may need replenishing.');
+
+  let accepted = false;
+  if (who.tester) {
+    const reserved = await db().prepare(`INSERT INTO operations(id,kind,owner,ip,digest,created)
+      VALUES(?,?,?,?,?,?) ON CONFLICT(id) DO NOTHING RETURNING id`).bind(operation, 'recognize_test', who.owner, who.ip, hash, now()).first();
+    accepted = !!reserved;
+  } else {
+    accepted = await reserve({ id: operation, kind: 'recognize', owner: who.owner, ip: who.ip, digest: hash,
+      global: intVariable('GLOBAL_DAILY_SCAN_LIMIT', 100, 10000), user: intVariable('VISITOR_DAILY_SCAN_LIMIT', 5, 200), perIP: intVariable('IP_DAILY_SCAN_LIMIT', 20, 500), window: 86400 });
+  }
+  if (!accepted) {
+    if (who.tester) throw new RecognitionError('IN_PROGRESS', 409, 'This section is already being processed.');
+    throw new RecognitionError('QUOTA_EXCEEDED', 429, 'The free allowance or shared site budget is used up. Saved progress is kept. Personal allowances recover over 24 hours; the site budget may need replenishing.');
+  }
+
   const began = Date.now();
   let result: ScanResult;
   try {

@@ -5,7 +5,7 @@ export async function POST(request: Request) {
   if (!sameOrigin(request)) return json({ error: 'Request not allowed.' }, 403);
   const who = await identity(request);
   try {
-    assertRecognitionReady();
+    assertRecognitionReady(who.tester);
     const key = request.headers.get('idempotency-key') || '';
     if (!/^[a-f0-9-]{36}$/.test(key)) return json({ error: 'Refresh the page and try again.' }, 400, who.cookie);
     let file: Blob | undefined, url: string | undefined, sampleAt = 0;

@@ -20,8 +20,8 @@ export async function POST(request: Request) {
     const bytes = await boundedBody(request, 600000), duration = parsePCM(bytes), mediaHash = await digest(bytes);
     if (Math.abs(duration * 1000 - (segment.end_ms - segment.start_ms)) > 60) return json({ error: 'This audio does not match the planned section length.' }, 400, who.cookie);
     if (segment.media_hash && segment.media_hash !== mediaHash) return json({ error: 'This section was already submitted with different audio.' }, 409, who.cookie);
-    if (segment.state !== 'pending') return json({ job: await readScan(row), allowance: await allowance(who.owner, who.ip) }, 200, who.cookie);
-    assertRecognitionReady();
+    if (segment.state !== 'pending') return json({ job: await readScan(row), allowance: await allowance(who.owner, who.ip, who.tester) }, 200, who.cookie);
+    assertRecognitionReady(who.tester);
     const acquired = await db().prepare(`UPDATE scan_segments SET state='processing',media_hash=?,claimed=?
       WHERE job_id=? AND ordinal=? AND state='pending' RETURNING ordinal`).bind(mediaHash, now(), id, index).first();
     if (!acquired) return json({ error: 'This section is being processed in another tab.', code: 'IN_PROGRESS' }, 409, who.cookie);
@@ -32,7 +32,7 @@ export async function POST(request: Request) {
       const result = await recognize({ file: new Blob([bytes], { type: 'audio/wav' }) }, who, segmentKey(id, index), segment.start_ms / 1000);
       await settleSegment(id, index, result.song ? 'matched' : 'no_match', result);
     }
-    return json({ job: await readScan(row), allowance: await allowance(who.owner, who.ip) }, 200, who.cookie);
+    return json({ job: await readScan(row), allowance: await allowance(who.owner, who.ip, who.tester) }, 200, who.cookie);
   } catch (e) {
     try {
       if (claimed && e instanceof RecognitionError && (e.code === 'QUOTA_EXCEEDED' || e.code === 'PROVIDER_NOT_CONFIGURED')) {
