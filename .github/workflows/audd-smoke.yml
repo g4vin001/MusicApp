@@ -1,0 +1,38 @@
+name: AudD smoke test
+
+on:
+  push:
+    branches:
+      - ops/audd-smoke
+
+permissions:
+  contents: read
+
+jobs:
+  smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Verify AudD token and recognition
+        env:
+          AUDD_API_TOKEN: ${{ secrets.AUDD_API_TOKEN }}
+        run: |
+          if [ -z "$AUDD_API_TOKEN" ]; then
+            echo "AUDD_API_TOKEN repository secret is missing."
+            exit 2
+          fi
+          curl --fail-with-body --silent --show-error https://api.audd.io/             -F "api_token=$AUDD_API_TOKEN"             -F "url=https://audd.tech/example.mp3"             > /tmp/audd.json
+          node <<'NODE'
+          const fs = require('fs');
+          const data = JSON.parse(fs.readFileSync('/tmp/audd.json', 'utf8'));
+          if (data.status !== 'success') {
+            const error = data.error || {};
+            console.error(`AudD smoke test failed: code=${error.error_code ?? 'unknown'} message=${error.error_message || error.error_description || 'unknown'}`);
+            process.exit(1);
+          }
+          if (!data.result) {
+            console.error('AudD smoke test returned no match for the known sample.');
+            process.exit(1);
+          }
+          console.log(`AudD smoke test passed: ${data.result.artist} — ${data.result.title}`);
+          NODE
