@@ -10,9 +10,9 @@ export async function GET(request: Request) {
     if (id) {
       const row = await ownedScan(id, who.owner);
       if (!row) return json({ error: 'This scan is unavailable or has expired.' }, 404, who.cookie);
-      return json({ job: await readScan(row), allowance: await allowance(who.owner, who.ip) }, 200, who.cookie);
+      return json({ job: await readScan(row), allowance: await allowance(who.owner, who.ip, who.tester) }, 200, who.cookie);
     }
-    return json({ jobs: await listScans(who.owner), allowance: await allowance(who.owner, who.ip) }, 200, who.cookie);
+    return json({ jobs: await listScans(who.owner), allowance: await allowance(who.owner, who.ip, who.tester) }, 200, who.cookie);
   } catch { return json({ error: 'Saved scans could not be loaded. Please try again.' }, 503, who.cookie); }
 }
 export async function POST(request: Request) {
@@ -25,16 +25,16 @@ export async function POST(request: Request) {
     const existing = await ownedScan(input.id, who.owner);
     if (existing) {
       if (existing.input_hash !== inputHash) return json({ error: 'This scan belongs to a different plan.' }, 409, who.cookie);
-      return json({ job: await readScan(existing), allowance: await allowance(who.owner, who.ip) }, 200, who.cookie);
+      return json({ job: await readScan(existing), allowance: await allowance(who.owner, who.ip, who.tester) }, 200, who.cookie);
     }
-    assertRecognitionReady();
+    assertRecognitionReady(who.tester);
     const windows = planScan(input.durationMs, input.mode, input.samples);
-    const available = await allowance(who.owner, who.ip);
+    const available = await allowance(who.owner, who.ip, who.tester);
     if (windows.length > available.remaining) return json({ error: `This plan needs up to ${windows.length} scans; ${available.remaining} are available now. Choose fewer survey sections or a shorter recording.`, code: 'QUOTA_EXCEEDED', allowance: available }, 429, who.cookie);
     const operationId = who.owner + ':plan:' + input.id;
     const prior = await db().prepare('SELECT digest FROM operations WHERE id=?').bind(operationId).first<{ digest: string }>();
     if (prior && prior.digest !== inputHash) return json({ error: 'This scan ID is already in use.' }, 409, who.cookie);
-    if (!prior && !await reserve({ id: operationId, kind: 'scan_job', owner: who.owner, ip: who.ip, digest: inputHash, global: 2000, user: 10, perIP: 50, window: 86400 })) return json({ error: 'The daily limit for new scan projects has been reached.' }, 429, who.cookie);
+    if (!prior && !who.tester && !await reserve({ id: operationId, kind: 'scan_job', owner: who.owner, ip: who.ip, digest: inputHash, global: 2000, user: 10, perIP: 50, window: 86400 })) return json({ error: 'The daily limit for new scan projects has been reached.' }, 429, who.cookie);
     // The plan and every window are persisted together. Audio remains on the device.
     await db().batch([
       db().prepare('INSERT INTO scan_jobs(id,owner,input,input_hash,created,expires) VALUES(?,?,?,?,?,?) ON CONFLICT(id) DO NOTHING').bind(input.id, who.owner, JSON.stringify(input), inputHash, now(), scanExpiry()),
