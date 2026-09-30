@@ -6,7 +6,7 @@ export const SongSchema = z.object({
   source: z.enum(['recognition','catalog']), sampleAt: z.number().min(0).max(7200).optional(),
 });
 export type Song = z.infer<typeof SongSchema>;
-export type Configuration = { recognition: boolean; dailyLimit: number; remainingScans: number; maxFileMB: number; supportUrl: string | null; sponsor: { label: string; url: string; description: string } | null };
+export type Configuration = { recognition: boolean; tester: boolean; dailyLimit: number; remainingScans: number; maxFileMB: number; supportUrl: string | null; sponsor: { label: string; url: string; description: string } | null };
 export function safeLink(value: unknown, hosts?: string[]): string | undefined {
   if (typeof value !== 'string' || value.length > 1500) return undefined;
   try { const u = new URL(value); return u.protocol === 'https:' && !u.username && !u.password && (!hosts || hosts.some(h => u.hostname === h || u.hostname.endsWith('.'+h))) ? u.href : undefined; } catch { return undefined; }
