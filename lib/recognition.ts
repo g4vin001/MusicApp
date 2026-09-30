@@ -1,5 +1,5 @@
 import { db, digest, getCache, intVariable, now, putCache, reserve, saveSong, variable } from './server';
-import { AudDRecognizer, type RecognitionInput } from './providers';
+import { AudDProviderError, AudDRecognizer, type RecognitionInput } from './providers';
 import type { ScanAllowance, ScanResult } from './scan';
 
 export class RecognitionError extends Error {
@@ -25,6 +25,20 @@ export async function allowance(owner: string, ip: string): Promise<ScanAllowanc
   return { limit, remaining: Math.max(0, Math.min(limit - (counts?.visitor || 0), intVariable('IP_DAILY_SCAN_LIMIT', 20, 500) - (counts?.network || 0), intVariable('GLOBAL_DAILY_SCAN_LIMIT', 100, 10000) - (counts?.total || 0), await totalBudgetRemaining())) };
 }
 
+function providerFailure(error: unknown) {
+  if (error instanceof AudDProviderError) {
+    const details = { kind: error.kind, providerCode: error.providerCode, httpStatus: error.httpStatus, requestId: error.requestId };
+    console.error('AudD recognition failed', details);
+    if (error.kind === 'authentication') return { error: 'Audio matching is temporarily unavailable because the provider rejected the site credentials.', code: 'PROVIDER_AUTH', status: 503, providerCalls: 1 };
+    if (error.kind === 'quota') return { error: 'Audio matching is temporarily unavailable because the provider allowance has been exhausted.', code: 'PROVIDER_QUOTA', status: 503, providerCalls: 1 };
+    if (error.kind === 'rate_limit') return { error: 'Audio matching is temporarily rate-limited. Try again in a moment.', code: 'PROVIDER_RATE_LIMIT', status: 503, providerCalls: 1 };
+    if (error.kind === 'invalid_audio') return { error: 'The recognition provider could not process this clip. Try a clearer 6–12 second section.', code: 'PROVIDER_REJECTED_AUDIO', status: 422, providerCalls: 1 };
+    if (error.kind === 'invalid_result') return { error: 'The recognition provider returned an unreadable response. Try again later.', code: 'PROVIDER_INVALID_RESULT', status: 502, providerCalls: 1 };
+  }
+  console.error('Recognition provider request did not finish', error instanceof Error ? error.name : typeof error);
+  return { error: 'Recognition did not finish. This request will not be sent again automatically.', code: 'PROVIDER_UNAVAILABLE', status: 503, providerCalls: 1 };
+}
+
 export async function recognize(input: RecognitionInput, who: { owner: string; ip: string }, requestId: string, sampleAt = 0): Promise<ScanResult> {
   assertRecognitionReady();
   const hash = await digest(input.file ? await input.file.arrayBuffer() : input.url || '');
@@ -34,7 +48,7 @@ export async function recognize(input: RecognitionInput, who: { owner: string; i
     if (existing.digest !== hash) throw new RecognitionError('REQUEST_CONFLICT', 409, 'This request was already used for another clip.');
     if (!existing.response) throw new RecognitionError('IN_PROGRESS', 409, 'This section is still processing. Check its saved progress shortly.');
     const result = JSON.parse(existing.response);
-    if (result.error) throw new RecognitionError('PROVIDER_UNAVAILABLE', 503, result.error);
+    if (result.error) throw new RecognitionError(result.code || 'PROVIDER_UNAVAILABLE', result.status || 503, result.error);
     return { provider: 'audd', providerCalls: 1, latencyMs: 0, ...result };
   }
   const cacheKey = 'audio:' + hash;
@@ -54,10 +68,10 @@ export async function recognize(input: RecognitionInput, who: { owner: string; i
     result = { song: song ? { ...song, sampleAt } : null, cached: false, provider: 'audd', providerCalls: 1, latencyMs: Date.now() - began };
     // Record the answer before caching or saving. Replaying a lost response must not bill twice.
     await db().prepare('UPDATE operations SET response=? WHERE id=?').bind(JSON.stringify(result), operation).run();
-  } catch {
-    const failure = { error: 'Recognition did not finish. This request will not be sent again automatically.', code: 'PROVIDER_UNAVAILABLE', providerCalls: 1 };
+  } catch (error) {
+    const failure = providerFailure(error);
     try { await db().prepare('UPDATE operations SET response=COALESCE(response,?) WHERE id=?').bind(JSON.stringify(failure), operation).run(); } catch { /* Reservation still prevents another paid call. */ }
-    throw new RecognitionError('PROVIDER_UNAVAILABLE', 503, failure.error);
+    throw new RecognitionError(failure.code, failure.status, failure.error);
   }
   try {
     if (input.file) await putCache(cacheKey, { song: result.song }, result.song ? 86400 : 600);
