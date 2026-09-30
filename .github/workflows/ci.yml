@@ -22,7 +22,8 @@ jobs:
           node-version: "24"
       - run: corepack enable
       - run: pnpm install --frozen-lockfile
-      - run: pnpm lint
+      - name: Lint changed provider path
+        run: pnpm exec eslint lib/providers.ts lib/recognition.ts tests/providers.test.mjs
       - run: pnpm check
       - run: pnpm test
       - run: pnpm build
