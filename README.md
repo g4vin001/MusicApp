@@ -1,6 +1,6 @@
-# WhatSongIsThis?
+# WhatSongIsThis? Creator Studio
 
-A music finder with microphone and browser-tab recording, audio/video clip preparation, AudD recognition, real song/artist search, saved finds, resumable song timelines, and explicit cost controls.
+A creator music-review workspace with AudD timelines, saved per-recording decisions, reusable platform-scoped license evidence, editor handoffs and optional bounded GPT writing. The original finder remains at `/find`. See [the creator pivot decision record](docs/creator-pivot.md) for evidence, economics, launch gates and activation.
 
 Built from the MusicAPp / Compare Website Ideas brief. See [the launch guide](docs/launch.md) for deployment, provider activation, economics and scope. The public UI clearly labels audio matching as awaiting activation until an owner-provided recognition token is configured.
 
@@ -17,7 +17,7 @@ pnpm build
 
 The bundled Sites runtime serves the application with Vinext/Cloudflare Workers and D1. Preserve `sites()` in `vite.config.ts`, the D1 migration history, and `.openai/hosting.json` when editing this existing site. `.env.example` lists only non-secret defaults and empty integrations.
 
-Recognition accuracy is not yet measured. The [benchmark runner](docs/benchmark.md) validates a labeled corpus without calling the provider by default, and requires an explicit request ceiling for live experiments.
+The 1 October 2026 v7 stress test measured 95/156 exact recording matches overall (47/60 clean and 48/96 altered); competitors were not measured. This release does not establish an accuracy improvement. The [benchmark runner](docs/benchmark.md) validates a labeled corpus without calling the provider by default, and requires an explicit request ceiling for live experiments.
 
 ## Clip recovery workbench
 

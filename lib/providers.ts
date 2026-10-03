@@ -1,12 +1,13 @@
-import { safeLink, type Song } from './contracts';
+import { isVideoPageURL, safeLink, type Song } from './contracts';
 
-export type RecognitionInput = { file?: Blob; url?: string };
+export type RecognitionInput = { file?: Blob; url?: string; startSeconds?: number };
 export interface MusicRecognizer {
   readonly name: 'audd';
   recognize(input: RecognitionInput): Promise<Song | null>;
 }
 
 export type AudDProviderFailureKind =
+  | 'blocked'
   | 'authentication'
   | 'quota'
   | 'rate_limit'
@@ -34,16 +35,17 @@ type AudDErrorPayload = {
 };
 
 type AudDResultPayload = {
+  score?: number;
   title?: string;
   artist?: string;
   album?: string;
-  spotify?: { id?: string; external_urls?: { spotify?: string }; album?: { images?: { url?: string }[] } };
-  apple_music?: { url?: string; artwork?: { url?: string }; isrc?: string };
+  spotify?: { id?: string; external_urls?: { spotify?: string }; album?: { images?: { url?: string; startSeconds?: number }[] } };
+  apple_music?: { url?: string; artwork?: { url?: string; startSeconds?: number }; isrc?: string };
 };
 
 type AudDResponsePayload = {
   status?: string;
-  result?: AudDResultPayload | null;
+  result?: AudDResultPayload | { songs?: AudDResultPayload[] }[] | null;
   error?: AudDErrorPayload;
   request_id?: string;
 };
@@ -54,6 +56,7 @@ function numericCode(value: unknown): number | null {
 }
 
 function failureKind(code: number | null, status: number): AudDProviderFailureKind {
+  if (code === 19 || code === 31337) return 'blocked';
   if (code === 900 || code === 901 || code === 903 || status === 401 || status === 403) return 'authentication';
   if (code === 902) return 'quota';
   if (code === 611 || status === 429) return 'rate_limit';
@@ -76,9 +79,17 @@ export class AudDRecognizer implements MusicRecognizer {
     else if (input.url) form.set('url', input.url);
     else throw new Error('MISSING_AUDIO');
 
+    const videoPage = !!input.url && isVideoPageURL(input.url);
+    const extended = !!input.url && (videoPage || (input.startSeconds || 0) > 0);
+    if (extended) {
+      form.set('limit', '1');
+      form.set('every', '1');
+      form.set('skip', '0');
+      form.set('skip_first_seconds', String(Math.max(0, Math.min(7200, Math.floor(input.startSeconds || 0)))));
+    }
     let response: Response;
     try {
-      response = await fetch('https://api.audd.io/', { method: 'POST', body: form, signal: AbortSignal.timeout(25_000) });
+      response = await fetch(extended ? 'https://enterprise.audd.io/' : 'https://api.audd.io/', { method: 'POST', body: form, signal: AbortSignal.timeout(extended ? 90_000 : 25_000) });
     } catch {
       throw new AudDProviderError('network');
     }
@@ -95,7 +106,16 @@ export class AudDRecognizer implements MusicRecognizer {
       throw new AudDProviderError(failureKind(code, response.status), code, response.status, typeof data.request_id === 'string' ? data.request_id : null);
     }
 
-    const s = data.result;
+    let s: AudDResultPayload | null | undefined;
+    if (extended) {
+      if (!Array.isArray(data.result)) throw new AudDProviderError('invalid_result', null, response.status);
+      if (data.result.some(chunk => !chunk || !Array.isArray(chunk.songs))) throw new AudDProviderError('invalid_result', null, response.status);
+      const songs = data.result.flatMap(chunk => chunk.songs || []);
+      s = songs.sort((a, b) => (b.score || 0) - (a.score || 0))[0] || null;
+    } else {
+      if (Array.isArray(data.result)) throw new AudDProviderError('invalid_result', null, response.status);
+      s = data.result;
+    }
     if (s === null) return null;
     if (!s || typeof s.title !== 'string' || typeof s.artist !== 'string' || !s.title || !s.artist) {
       throw new AudDProviderError('invalid_result', null, response.status, typeof data.request_id === 'string' ? data.request_id : null);

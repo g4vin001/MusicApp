@@ -10,8 +10,9 @@ import { prepareClip } from '@/lib/audio';
 import { secondsLabel, type Configuration } from '@/lib/contracts';
 import { intervalCoverage, planScan, scanCSV, scanStats, timelineHits, type ScanAllowance, type ScanInput, type ScanJob, type ScanSummary, type ScanWindow } from '@/lib/scan';
 import { testerHeaders } from '@/lib/tester-client';
+import { CreatorReport } from '@/components/creator-report';
 
-type Props = { audio: AudioBuffer | null; sourceURL: string; fileHash: string; filename: string; configuration: Configuration | null; locked: boolean; onChooseFile: () => void; onBusyChange: (running: boolean) => void; onComplete: () => void };
+type Props = { audio: AudioBuffer | null; sourceURL: string; fileHash: string; filename: string; configuration: Configuration | null; locked: boolean; onChooseFile: () => void; onBusyChange: (running: boolean) => void; onComplete: () => void; creator?: boolean };
 type JobResponse = { job: ScanJob; allowance: ScanAllowance };
 async function request<T>(url: string, options?: RequestInit): Promise<T> {
   const response = await fetch(url, { ...options, headers: testerHeaders(options?.headers), signal: AbortSignal.timeout(35_000) });
@@ -27,9 +28,9 @@ function download(filename: string, content: string, type: string) {
 const label = (ms: number) => secondsLabel(ms / 1000);
 const stateLabels = { pending: 'Not checked', processing: 'Processing', matched: 'Match', no_match: 'No match', silent: 'Silence skipped', error: 'Unresolved' };
 
-export function ScanWorkspace({ audio, sourceURL, fileHash, filename, configuration, locked, onChooseFile, onBusyChange, onComplete }: Props) {
+export function ScanWorkspace({ audio, sourceURL, fileHash, filename, configuration, locked, onChooseFile, onBusyChange, onComplete, creator = false }: Props) {
   const [mode, setMode] = useState<ScanInput['mode']>('survey');
-  const [samples, setSamples] = useState(5);
+  const [samples, setSamples] = useState(2);
   const [available, setAvailable] = useState<ScanAllowance | null>(null);
   const [jobs, setJobs] = useState<ScanSummary[]>([]);
   const [job, setJob] = useState<ScanJob | null>(null);
@@ -131,7 +132,7 @@ export function ScanWorkspace({ audio, sourceURL, fileHash, filename, configurat
   }
   const selectedSegment = job?.segments.find(s => s.index === selected);
   return <section className="section scan-workspace" id="scan" aria-label="Video song timeline">
-    <div className="section-head"><div><span className="eyebrow">Music throughout a recording</span><h2>Build a song timeline</h2></div><span className="pill"><AudioLines size={15}/>{configuration?.tester?'Unlimited tester scans':`${remaining} free scans available`}</span></div>
+    <div className="section-head"><div><span className="eyebrow">{creator ? 'Choose coverage, then review the results' : 'Music throughout a recording'}</span><h2>{creator ? 'Scan your recording' : 'Build a song timeline'}</h2></div><span className="pill"><AudioLines size={15}/>{configuration?.tester?'Unlimited tester scans':`${remaining} free scans available`}</span></div>
     <div className="scan-layout">
       <div className="panel scan-planner">
         <div className="row between"><h3>Plan a scan</h3><button className="btn ghost" onClick={onChooseFile} disabled={locked || loading}><FolderOpen size={16}/>{audio ? 'Change file' : 'Choose file'}</button></div>
@@ -165,8 +166,8 @@ export function ScanWorkspace({ audio, sourceURL, fileHash, filename, configurat
       {sameFile ? <audio ref={player} src={sourceURL} controls preload="metadata" aria-label="Replay original recording"/> : <p className="notice">Select <strong>{job.filename}</strong> again to replay or resume. Its contents must match the original file. <button className="btn ghost" onClick={onChooseFile} disabled={locked || loading}>Choose file</button></p>}
       {selectedSegment && <p className="small">Selected {label(selectedSegment.startMs)}–{label(selectedSegment.endMs)}: {stateLabels[selectedSegment.state]}. {selectedSegment.result?.error}</p>}
       <p className="small muted">Each range shows sections containing a match, not the song's exact start or end. Adjacent matches for the same recording are grouped; unchecked gaps are never filled in.</p>
-      {hits.length ? <div className="timeline-list">{hits.map((hit, index) => <div className="timeline-entry" key={`${hit.song.id}:${hit.startMs}`}><button className="timeline-time" disabled={!sameFile} onClick={() => jump({ index: job.segments.find(s => s.startMs === hit.startMs)?.index || 0, startMs: hit.startMs, endMs: hit.endMs })}><Play size={14}/><strong>{label(hit.startMs)}–{label(hit.endMs)}</strong><span>{hit.samples} matched {hit.samples === 1 ? 'section' : 'sections'}</span></button><SongCard song={{ ...hit.song, sampleAt: undefined }}/></div>)}</div> : <div className="empty-box"><strong>{stats.completed ? 'No songs identified in the finished sections.' : 'Your timeline will appear as sections finish.'}</strong><p className="small">A no-match result does not mean the recording contains no music.</p></div>}
-      <div className="scan-export"><button className="btn secondary" onClick={() => download('whatsong-timeline.csv', scanCSV(job), 'text/csv;charset=utf-8')}><Download size={16}/>Export CSV</button><button className="btn ghost" onClick={() => download('whatsong-timeline.json', JSON.stringify({ ...job, fileHash: undefined, stats, timeline: hits, note: 'Ranges are submitted windows, not exact song boundaries.' }, null, 2), 'application/json')}><Download size={16}/>Export JSON</button><span className="micro muted">Exports include pending, no-match and unresolved sections.</span></div>
+      {creator ? <CreatorReport key={job.id} job={job} configuration={configuration} onReplay={jump} canReplay={sameFile}/> : hits.length ? <div className="timeline-list">{hits.map(hit => <div className="timeline-entry" key={`${hit.song.id}:${hit.startMs}`}><button className="timeline-time" disabled={!sameFile} onClick={() => jump({ index: job.segments.find(s => s.startMs === hit.startMs)?.index || 0, startMs: hit.startMs, endMs: hit.endMs })}><Play size={14}/><strong>{label(hit.startMs)}–{label(hit.endMs)}</strong><span>{hit.samples} matched {hit.samples === 1 ? 'section' : 'sections'}</span></button><SongCard song={{ ...hit.song, sampleAt: undefined }}/></div>)}</div> : <div className="empty-box"><strong>{stats.completed ? 'No songs identified in the finished sections.' : 'Your timeline will appear as sections finish.'}</strong><p className="small">A no-match result does not mean the recording contains no music.</p></div>}
+      {!creator && <div className="scan-export"><button className="btn secondary" onClick={() => download('whatsong-timeline.csv', scanCSV(job), 'text/csv;charset=utf-8')}><Download size={16}/>Export CSV</button><button className="btn ghost" onClick={() => download('whatsong-timeline.json', JSON.stringify({ ...job, fileHash: undefined, stats, timeline: hits, note: 'Ranges are submitted windows, not exact song boundaries.' }, null, 2), 'application/json')}><Download size={16}/>Export JSON</button><span className="micro muted">Exports include pending, no-match and unresolved sections.</span></div>}
     </div>}
   </section>;
 }

@@ -1,2 +1,2 @@
-import { MusicFinder } from '@/components/music-finder';
-export default function Home() { return <MusicFinder />; }
+import { CreatorStudio } from '@/components/creator-studio';
+export default function Home() { return <CreatorStudio />; }

@@ -6,17 +6,26 @@ export const SongSchema = z.object({
   source: z.enum(['recognition','catalog']), sampleAt: z.number().min(0).max(7200).optional(),
 });
 export type Song = z.infer<typeof SongSchema>;
-export type Configuration = { recognition: boolean; tester: boolean; dailyLimit: number; remainingScans: number; maxFileMB: number; supportUrl: string | null; sponsor: { label: string; url: string; description: string } | null };
+export type Configuration = { recognition: boolean; tester: boolean; ai?: boolean; dailyLimit: number; remainingScans: number; maxFileMB: number; supportUrl: string | null; sponsor: { label: string; url: string; description: string } | null };
 export function safeLink(value: unknown, hosts?: string[]): string | undefined {
   if (typeof value !== 'string' || value.length > 1500) return undefined;
   try { const u = new URL(value); return u.protocol === 'https:' && !u.username && !u.password && (!hosts || hosts.some(h => u.hostname === h || u.hostname.endsWith('.'+h))) ? u.href : undefined; } catch { return undefined; }
+}
+export function isVideoPageURL(input: string): boolean {
+  try {
+    const u = new URL(input);
+    const h = u.hostname.toLowerCase();
+    if (['youtube.com', 'www.youtube.com', 'm.youtube.com'].includes(h)) return (u.pathname === '/watch' && /^[\w-]{11}$/.test(u.searchParams.get('v') || '')) || /^\/(shorts|embed)\/[\w-]{11}\/?$/.test(u.pathname);
+    if (h === 'youtu.be') return /^\/[\w-]{11}\/?$/.test(u.pathname);
+    return ['www.tiktok.com', 'tiktok.com', 'vm.tiktok.com', 'vt.tiktok.com', 'www.instagram.com', 'instagram.com', 'soundcloud.com', 'www.soundcloud.com'].includes(h) && u.pathname.length > 1;
+  } catch { return false; }
 }
 export function validateMediaURL(input: string): string {
   let url: URL;
   try { url = new URL(input); } catch { throw new Error('Paste a complete HTTPS link to an audio or video file.'); }
   const h = url.hostname.toLowerCase();
   if (url.protocol !== 'https:' || url.username || url.password || (url.port && url.port !== '443') || !h.includes('.') || h.endsWith('.') || /(^|\.)(localhost|local|internal|test|invalid)$/.test(h) || /^[\d.]+$/.test(h) || h.includes(':') || h.startsWith('[')) throw new Error('Use a public HTTPS media link without a password.');
-  if (!/\.(mp3|wav|m4a|aac|ogg|flac|mp4|webm|mov)$/i.test(url.pathname)) throw new Error('This needs a direct audio or video file link. For YouTube, TikTok or Reels, use Listen → Record a browser tab, or upload a clip.');
+  if (!isVideoPageURL(input) && !/\.(mp3|wav|m4a|aac|ogg|flac|mp4|webm|mov)$/i.test(url.pathname)) throw new Error('Use a public YouTube, TikTok, Instagram, SoundCloud, or direct audio/video link.');
   if (input.length > 1800) throw new Error('That link is too long. Upload the clip instead.');
   url.hash = ''; return url.href;
 }

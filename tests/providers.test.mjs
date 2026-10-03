@@ -35,9 +35,32 @@ await test('AudD provider adapter', async t => {
     assert.equal(song.id, 'audd:fixture');
   });
 
+  await t.test('routes video pages to one bounded enterprise section', async () => {
+    globalThis.fetch = async (url, options) => {
+      assert.equal(url, 'https://enterprise.audd.io/');
+      assert.equal(options.body.get('limit'), '1');
+      assert.equal(options.body.get('skip_first_seconds'), '30');
+      return Response.json({status:'success', result:[{songs:[{title:'Fixture soundtrack',artist:'Composer',score:100}]}]});
+    };
+    const song = await new AudDRecognizer('private-token').recognize({url:'https://www.youtube.com/watch?v=0jXTBAGv9ZQ',startSeconds:30});
+    assert.equal(song.title, 'Fixture soundtrack');
+  });
+  await t.test('enterprise empty songs are no-match', async () => {
+    globalThis.fetch = async () => Response.json({status:'success',result:[{songs:[]}]});
+    assert.equal(await new AudDRecognizer('private-token').recognize({url:'https://youtu.be/0jXTBAGv9ZQ'}), null);
+  });
+  await t.test('enterprise malformed response is an error', async () => {
+    globalThis.fetch = async () => Response.json({status:'success',result:[{}]});
+    await assert.rejects(() => new AudDRecognizer('private-token').recognize({url:'https://youtu.be/0jXTBAGv9ZQ'}), error => error.kind === 'invalid_result');
+  });
+
   await t.test('keeps successful no-match distinct from an error', async () => {
     globalThis.fetch = async () => Response.json({ status: 'success', result: null });
     assert.equal(await new AudDRecognizer('private-token').recognize({ file: clip }), null);
+  });
+
+  await t.test('classifies blocked provider requests separately from no-match', async () => {
+    assert.equal((await providerError({status:'error',error:{error_code:19}})).kind, 'blocked');
   });
 
   await t.test('classifies authentication failures', async () => {

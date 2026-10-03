@@ -35,10 +35,11 @@ function providerFailure(error: unknown) {
   if (error instanceof AudDProviderError) {
     const details = { kind: error.kind, providerCode: error.providerCode, httpStatus: error.httpStatus, requestId: error.requestId };
     console.error('AudD recognition failed', details);
+    if (error.kind === 'blocked') return { error: 'The recognition provider could not process this request (code ' + error.providerCode + '). This is a provider failure, not a song no-match. Try Listen → Record a browser tab, or upload the audio clip instead.', code: 'PROVIDER_BLOCKED', status: 503, providerCalls: 1 };
     if (error.kind === 'authentication') return { error: 'Audio matching is temporarily unavailable because the provider rejected the site credentials.', code: 'PROVIDER_AUTH', status: 503, providerCalls: 1 };
     if (error.kind === 'quota') return { error: 'Audio matching is temporarily unavailable because the provider allowance has been exhausted.', code: 'PROVIDER_QUOTA', status: 503, providerCalls: 1 };
     if (error.kind === 'rate_limit') return { error: 'Audio matching is temporarily rate-limited. Try again in a moment.', code: 'PROVIDER_RATE_LIMIT', status: 503, providerCalls: 1 };
-    if (error.kind === 'invalid_audio') return { error: 'The recognition provider could not process this clip. Try a clearer 6–12 second section.', code: 'PROVIDER_REJECTED_AUDIO', status: 422, providerCalls: 1 };
+    if (error.kind === 'invalid_audio') return { error: 'The provider could not read this audio or video link. For private, restricted, or unavailable videos, record a browser tab or upload a 12-second clip.', code: 'PROVIDER_REJECTED_AUDIO', status: 422, providerCalls: 1 };
     if (error.kind === 'invalid_result') return { error: 'The recognition provider returned an unreadable response. Try again later.', code: 'PROVIDER_INVALID_RESULT', status: 502, providerCalls: 1 };
   }
   console.error('Recognition provider request did not finish', error instanceof Error ? error.name : typeof error);
@@ -47,7 +48,7 @@ function providerFailure(error: unknown) {
 
 export async function recognize(input: RecognitionInput, who: { owner: string; ip: string; tester?: boolean }, requestId: string, sampleAt = 0): Promise<ScanResult> {
   assertRecognitionReady(!!who.tester);
-  const hash = await digest(input.file ? await input.file.arrayBuffer() : input.url || '');
+  const hash = await digest(input.file ? await input.file.arrayBuffer() : JSON.stringify([input.url || '', input.startSeconds || 0]));
   const operation = who.owner + ':' + requestId;
   const existing = await db().prepare('SELECT digest,response FROM operations WHERE id=?').bind(operation).first<{ digest: string; response: string | null }>();
   if (existing) {

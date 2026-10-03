@@ -11,12 +11,14 @@ export async function POST(request: Request) {
     let file: Blob | undefined, url: string | undefined, sampleAt = 0;
     if (request.headers.get('content-type')?.includes('application/json')) {
       const body = await readJSON(request, 4096); url = validateMediaURL(String(body.url || ''));
+      sampleAt = Number(body.startSeconds || 0);
+      if (!Number.isInteger(sampleAt) || sampleAt < 0 || sampleAt > 7200) return json({ error: 'Use a start time between 0 and 7200 seconds.' }, 400, who.cookie);
     } else {
       const bytes = await boundedBody(request, 600000); parsePCM(bytes); file = new Blob([bytes], { type: 'audio/wav' });
       sampleAt = Number(request.headers.get('x-sample-start') || 0);
       if (!Number.isFinite(sampleAt) || sampleAt < 0 || sampleAt > 1200) sampleAt = 0;
     }
-    const result = await recognize({ file, url }, who, key, sampleAt);
+    const result = await recognize({ file, url, startSeconds: sampleAt }, who, key, sampleAt);
     try { await cleanup(); } catch { /* Housekeeping must not hide a paid result. */ }
     return json(result, 200, who.cookie);
   } catch (e) {
