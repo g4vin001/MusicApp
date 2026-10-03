@@ -14,5 +14,5 @@ export function generateMetadata(): Metadata {
   return { ...baseMetadata, ...(publisher ? { other: { 'google-adsense-account': publisher } } : {}) };
 }
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
-  return <html lang="en"><body>{children}</body></html>;
+  return <html lang="en" className="dark"><body>{children}</body></html>;
 }

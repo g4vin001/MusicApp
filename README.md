@@ -2,9 +2,15 @@
 
 A creator music-review workspace with AudD timelines, saved per-recording decisions, reusable platform-scoped license evidence, editor handoffs and optional bounded GPT writing. The original finder remains at `/find`. See [the creator pivot decision record](docs/creator-pivot.md) for evidence, economics, launch gates and activation.
 
-Built from the MusicAPp / Compare Website Ideas brief. See [the launch guide](docs/launch.md) for deployment, provider activation, economics and scope. The public UI clearly labels audio matching as awaiting activation until an owner-provided recognition token is configured.
+Built from the MusicAPp / Compare Website Ideas brief. See [the launch guide](docs/launch.md) for deployment, provider activation, economics and scope. Recognition availability and request allowances come from the live server configuration; unconfigured integrations remain disabled.
 
 Published early access: https://whatsong-finder.paz-peter.chatgpt.site
+
+## Independent source and publishing
+
+The Site's own source history is authoritative. Develop, validate, save a Site version, and publish it through Sites. GitHub is not required for builds, hosting, visitor identity, saved records, or publishing. The original GitHub repository is a historical copy; do not mirror future changes into it or use it as a deployment input unless the owner explicitly asks to reconnect it.
+
+The copied GitHub Actions workflow and public GitHub profile links have been removed from this independent app. Keep the native version history and existing production database in place. See [the visual design decision](docs/visual-direction.md) for the current palette, adjacent-product research, and validation boundaries.
 
 ## Commands
 

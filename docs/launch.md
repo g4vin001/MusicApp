@@ -97,7 +97,7 @@ Use Node 24 and the checked-in pnpm lockfile. Install dependencies with the proj
 - AudD production token and a real user-recording test.
 - Microphone and tab sharing on HTTPS physical devices.
 - Sponsor/support or approved ad/payment account activation.
-- A dedicated GitHub repository remains optional. Progress is saved in `g4vin001/g4vin001`, branch `musicapp/whatsong-initial`, under `projects/whatsong-finder/`; the default branch and profile content are preserved. The connector cannot create a new repository. The Site's own source repository is the deployment source of truth.
+- Independent publishing: use the Site's native source history and version/deployment workflow. GitHub is no longer a sync destination or a release prerequisite; preserve the old repository as a historical copy.
 
 ## Verification evidence
 
