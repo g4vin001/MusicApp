@@ -5,7 +5,7 @@ import { resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import ts from 'typescript';
 
-const output = resolve('.sites-runtime/clip-tests');
+const output = resolve('.runtime/clip-tests');
 mkdirSync(output, { recursive: true });
 for (const name of ['clip-processing', 'contracts']) {
   writeFileSync(`${output}/${name}.mjs`, ts.transpileModule(readFileSync(`lib/${name}.ts`, 'utf8'), { compilerOptions: { module: ts.ModuleKind.ESNext, target: ts.ScriptTarget.ES2022 } }).outputText);

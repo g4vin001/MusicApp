@@ -28,8 +28,10 @@ yarn-debug.log*
 yarn-error.log*
 .pnpm-debug.log*
 
-# env files (can opt-in for committing if needed)
+# Local integration secrets
 .env*
+.dev.vars*
+!.dev.vars.example
 
 # vercel
 .vercel
@@ -38,13 +40,12 @@ yarn-error.log*
 next-env.d.ts
 /dist/
 /.wrangler/
-# Checkout-local execution profile and tool state; never publish them.
-/.sites-runtime/
+# Local tests and private benchmark reports
+/.runtime/
 /.agents/
 /.codex/
 /outputs/
 /work/
 
-!.env.example
 
 *.tsbuildinfo

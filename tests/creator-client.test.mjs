@@ -5,7 +5,7 @@ import { resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import ts from 'typescript';
 
-const output = resolve('.sites-runtime/client-tests');
+const output = resolve('.runtime/client-tests');
 mkdirSync(output, { recursive: true });
 for (const name of ['creator-client', 'tester-client']) {
   const source = readFileSync(`lib/${name}.ts`, 'utf8').replace("'./tester-client'", "'./tester-client.mjs'");

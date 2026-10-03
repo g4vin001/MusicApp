@@ -4,13 +4,13 @@ The product decision is **free single-song identification for visitors**. AudD's
 
 ## Current state
 
-The recognizer and scan workflows are implemented, but the production account has no AudD token. Uploaded clips cannot yet be identified publicly. The site also has no connected ad-network account, publisher ID or sponsorship destination. Ownership verification support is implemented; network ads and ad revenue are not live.
+The recognizer and scan workflows are implemented. The earlier host has an encrypted AudD token configured; the standalone Cloudflare deployment must receive that token again before public recognition is activated. The site also has no connected ad-network account, publisher ID or sponsorship destination. Ownership verification support is implemented; network ads and ad revenue are not live.
 
 The immediate dependency is an owner-controlled AudD account/token. No code change is needed to add that token as the server-side `AUDD_API_TOKEN` secret and republish. Do not use a public demo token, put a secret in source control, or expose it in client configuration.
 
 ## Activate with a bounded budget
 
-1. Obtain the owner token from https://dashboard.audd.io/ and configure the Site secret `AUDD_API_TOKEN`.
+1. Obtain the owner token from https://dashboard.audd.io/ and configure the Cloudflare Worker secret `AUDD_API_TOKEN`.
 2. Keep the launch settings at `GLOBAL_DAILY_SCAN_LIMIT=100`, `VISITOR_DAILY_SCAN_LIMIT=5`, `IP_DAILY_SCAN_LIMIT=20`, `TOTAL_SCAN_LIMIT=300`.
 3. Republish. `/api/health` reports configuration/budget state without calling the provider. `configured` does not mean token validity has been tested.
 4. Make one real identification from a known short recording, then one no-music recording. Check the result, provider usage and saved result after reload. This validates activation, not accuracy.

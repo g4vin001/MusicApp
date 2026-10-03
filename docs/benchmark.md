@@ -6,27 +6,27 @@ The runner measures the production AudD adapter against audio with known answers
 
 Start with 50–100 short clips you have permission to submit, including clean commercial recordings, noise, speech over music, quiet passages, sped-up/slowed edits, genre/language variety, covers/remixes, and deliberate no-music negatives. Keep distinct groups in the manifest. Label the actual version of each recording by hand. A song missing from a provider catalog still has a known title: do not relabel it as a negative to improve the score.
 
-Copy `docs/benchmark.example.json` to an ignored folder such as `.sites-runtime/corpus/manifest.json`. Put the WAV files relative to that manifest. The example is a template, not an included dataset. Each input must be 2–12 seconds of mono 22,050 Hz signed 16-bit PCM WAV, at most 600,000 bytes. Use the website's clip preparation or an audio editor. Do not commit recordings, credentials or private reports. `expected: null` means a deliberate negative where no identification should be returned. Optional `expected.aliases` is an array of acceptable `{ "title": "…", "artist": "…" }` pairs; specify these before running, with a recorded reason for any later correction.
+Copy `docs/benchmark.example.json` to an ignored folder such as `.runtime/corpus/manifest.json`. Put the WAV files relative to that manifest. The example is a template, not an included dataset. Each input must be 2–12 seconds of mono 22,050 Hz signed 16-bit PCM WAV, at most 600,000 bytes. Use the website's clip preparation or an audio editor. Do not commit recordings, credentials or private reports. `expected: null` means a deliberate negative where no identification should be returned. Optional `expected.aliases` is an array of acceptable `{ "title": "…", "artist": "…" }` pairs; specify these before running, with a recorded reason for any later correction.
 
 ## Validate, then explicitly run
 
 From the project root, with dependencies installed:
 
 ```sh
-node scripts/benchmark-recognition.mjs .sites-runtime/corpus/manifest.json
+node scripts/benchmark-recognition.mjs .runtime/corpus/manifest.json
 ```
 
 This validates every file and reports the request count and estimated maximum cost. It makes no network requests. For a live run, provide your own `AUDD_API_TOKEN` through your shell's secure environment or secret manager, then:
 
 ```sh
-node scripts/benchmark-recognition.mjs .sites-runtime/corpus/manifest.json --run --max-requests 100 --request-cost-usd 0.005
+node scripts/benchmark-recognition.mjs .runtime/corpus/manifest.json --run --max-requests 100 --request-cost-usd 0.005
 ```
 
 The explicit maximum must cover the corpus; at most 250 clips are accepted. Confirm your actual provider price and override the per-request estimate accordingly. This is an operator CLI: it calls AudD directly, bypassing the website's visitor/global allowances and cache. Its explicit request ceiling is independent of those allowances. The public `test` token is rejected.
 
 Requests run sequentially with the production adapter's timeout. The runner does not retry; it stops after three consecutive provider errors. Ctrl-C stops after the current request settles. Re-running starts a new paid experiment, not a resume. A timeout or interrupted request can still be billed. Each request is checkpointed before submission and after the response; an unfinished `inflight` record means its result is unknown. Do not assume it was free.
 
-Reports are written with restricted file permissions under `.sites-runtime/benchmarks/`. They contain labels, returned metadata, input/source hashes, per-case outcomes, timings, and grouped metrics, but no audio or token. The console prints the report path. Preserve a report alongside its private corpus before publishing claims.
+Reports are written with restricted file permissions under `.runtime/benchmarks/`. They contain labels, returned metadata, input/source hashes, per-case outcomes, timings, and grouped metrics, but no audio or token. The console prints the report path. Preserve a report alongside its private corpus before publishing claims.
 
 ## Interpret the report
 

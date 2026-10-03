@@ -1,0 +1,38 @@
+{
+  "$schema": "./node_modules/wrangler/config-schema.json",
+  "name": "whatsong-creator-studio",
+  "main": "vinext/server/fetch-handler",
+  "compatibility_date": "2026-05-15",
+  "compatibility_flags": [
+    "nodejs_compat"
+  ],
+  "workers_dev": true,
+  "observability": {
+    "enabled": true
+  },
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "whatsong-creator-studio",
+      "database_id": "00000000-0000-4000-8000-000000000000",
+      "migrations_dir": "drizzle"
+    }
+  ],
+  "vars": {
+    "PUBLIC_SITE_URL": "",
+    "GLOBAL_DAILY_SCAN_LIMIT": "100",
+    "VISITOR_DAILY_SCAN_LIMIT": "5",
+    "IP_DAILY_SCAN_LIMIT": "20",
+    "TOTAL_SCAN_LIMIT": "300",
+    "CREATOR_AI_ENABLED": "false",
+    "CREATOR_AI_MODEL": "gpt-4.1-mini",
+    "CREATOR_AI_DAILY_LIMIT": "30",
+    "CREATOR_AI_VISITOR_LIMIT": "3",
+    "CREATOR_AI_TOTAL_LIMIT": "100",
+    "ADSENSE_CLIENT_ID": "",
+    "SUPPORT_URL": "",
+    "SPONSOR_LABEL": "",
+    "SPONSOR_URL": "",
+    "SPONSOR_DESCRIPTION": ""
+  }
+}

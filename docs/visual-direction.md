@@ -41,11 +41,11 @@ Use the platform's system sans font for speed, privacy and reliable rendering. U
 - Navigation adapts to two columns on narrow screens. File selection, project history, review, evidence, exports and help remain available.
 - Keyboard focus and reduced-motion preferences apply throughout. Interactive browser/device testing is still required to establish real-world visual and accessibility quality.
 
-## Independence boundary
+## Independent hosting
 
-The app's native Site source history and publishing workflow are authoritative. There are no new writes to the user's GitHub repositories. The original MusicApp repository remains a historical copy, and its account connection is not globally revoked. GitHub Actions is removed from this app copy, and public legal pages no longer direct visitors to a GitHub profile. Runtime hosting and the existing D1 data remain in place.
+The owner subsequently requested publishing the polished changes to GitHub and hosting outside ChatGPT. `g4vin001/MusicApp` is now the maintained source for direct Cloudflare Workers/D1 deployment. Public legal pages still use the app's support route. The standalone build removes Sites tooling, ChatGPT authentication scaffolding and hardcoded previous-host metadata.
 
-Independence from GitHub does not mean eliminating the existing recognition provider or hosting service. Provider availability, budgets, project expiry, anonymous collections and optional AI activation keep their existing behavior.
+The original hosted app remains available during migration. Saved anonymous collections do not automatically transfer between domains. External account authorization and encrypted provider secrets are handled in [the standalone deployment guide](standalone-deployment.md).
 
 ## What to measure next
 

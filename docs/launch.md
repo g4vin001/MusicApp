@@ -1,8 +1,10 @@
+> Current hosting: this repository is prepared for direct Cloudflare publication outside ChatGPT. See [standalone deployment](standalone-deployment.md) for current commands, account setup and the honest launch status. Evidence below records earlier releases.
+
 # WhatSongIsThis? launch and operating guide
 
 Status: working early-access website. Audio recognition is implemented but deliberately unavailable to visitors until an owner-provided AudD token is configured. No paid subscriptions, purchases, ad network account, or guaranteed revenue are implied.
 
-Published URL: https://whatsong-finder.paz-peter.chatgpt.site . Sites reported a successful public deployment on September 27, 2026. The execution environment cannot open the production origin (edge response 403 / 1010), so publication success is not an end-to-end production search check.
+Earlier host (kept available during migration): https://whatsong-finder.paz-peter.chatgpt.site . Sites reported a successful public deployment on September 27, 2026. The execution environment cannot open the production origin (edge response 403 / 1010), so publication success is not an end-to-end production search check.
 
 ## What is implemented
 
@@ -23,7 +25,7 @@ Published URL: https://whatsong-finder.paz-peter.chatgpt.site . Sites reported a
 
 ## Architecture
 
-React 19 / Next-compatible Vinext runs on a Cloudflare Worker through Sites. D1 stores song metadata, recognition cache, allowance reservations, and seven-day scan plans/results. R2 is intentionally not enabled: audio is streamed through memory to the recognition provider and not persisted. The browser handles clip decoding and preparation. There is no FFmpeg server, Supabase project or paid worker queue to operate for this initial release.
+React 19 / Next-compatible Vinext runs directly on a Cloudflare Worker with its own D1 binding. Standalone account setup, migrations and publication are documented in [the deployment guide](standalone-deployment.md). D1 stores song metadata, recognition cache, allowance reservations, and seven-day scan plans/results. R2 is intentionally not enabled: audio is streamed through memory to the recognition provider and not persisted. The browser handles clip decoding and preparation. There is no FFmpeg server, Supabase project or paid worker queue to operate for this initial release.
 
 Existing RestaurantApp/Vercel/Supabase projects are unrelated and were not modified.
 
@@ -84,22 +86,22 @@ Supported local files depend on browser codecs. A 40 MB compressed file can requ
 
 ## Development and verification
 
-Use Node 24 and the checked-in pnpm lockfile. Install dependencies with the project runtime's supported installer or `pnpm install --frozen-lockfile` outside the managed image.
+Use Node 24 and the checked-in pnpm lockfile. Install dependencies with `pnpm install --frozen-lockfile`.
 
 - `pnpm check`: TypeScript.
 - `pnpm test`: actual server route handlers against a SQLite-backed D1 adapter and stubbed external provider responses. This proves handling and spending boundaries; it does not measure recognition accuracy.
 - `pnpm build`: production Worker/client build.
-- For local D1, generate migrations with `pnpm db:generate`, build the configuration, then apply each new migration once to `.wrangler/state` using Wrangler's `d1 execute --local`.
-- Store local secrets only in ignored `.env` / `.dev.vars`; configure production secrets through Sites.
+- For local D1, generate migrations with `pnpm db:generate` and apply outstanding migrations with `pnpm db:migrate:local`. Remote migrations run as part of `pnpm deploy`.
+- Store local secrets only in ignored `.env` / `.dev.vars`; configure production Worker secrets directly in Cloudflare.
 
 ## Release gates still requiring owner accounts or physical devices
 
 - AudD production token and a real user-recording test.
 - Microphone and tab sharing on HTTPS physical devices.
 - Sponsor/support or approved ad/payment account activation.
-- Independent publishing: use the Site's native source history and version/deployment workflow. GitHub is no longer a sync destination or a release prerequisite; preserve the old repository as a historical copy.
+- Independent publishing: GitHub main is the source, and Cloudflare Workers/D1 is the external deployment target. Complete Cloudflare account authorization and re-enter encrypted recognition/operator secrets using [the deployment guide](standalone-deployment.md).
 
-## Verification evidence
+## Earlier release verification evidence
 
 TypeScript and the production Worker build passed. The automated suite reports 41 passing tests (38 cases and three parent tests), covering actual route code, SQLite, stubbed paid responses, persistent scans, recovery, allowance exhaustion, silence, privacy, coverage math, and benchmark scoring/CLI spending gates. It does not measure real recognition quality. A real request to AudD using its public example and public test token returned Everybody Wants To Rule The World by Tears For Fears. This is connectivity evidence, not an accuracy benchmark or visitor-recognition activation.
 

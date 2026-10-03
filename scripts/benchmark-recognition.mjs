@@ -17,7 +17,7 @@ const hash = bytes => createHash('sha256').update(bytes).digest('hex');
 async function loadAdapter() {
   // Compile the production adapter and WAV validator, so the benchmark exercises
   // the same normalization and timeout behavior as the website.
-  const destination = resolve(root, '.sites-runtime/benchmark-modules');
+  const destination = resolve(root, '.runtime/benchmark-modules');
   await mkdir(destination, { recursive: true });
   const sourceHashes = {};
   for (const name of ['contracts', 'providers']) {
@@ -72,7 +72,7 @@ async function main() {
   const token = (process.env.AUDD_API_TOKEN || '').trim();
   if (!token || token === 'test') throw new Error('A private AUDD_API_TOKEN is required. The public test token is not accepted.');
   const provider = new adapter.AudDRecognizer(token);
-  const folder = resolve(root, '.sites-runtime/benchmarks');
+  const folder = resolve(root, '.runtime/benchmarks');
   await mkdir(folder, { recursive: true, mode: 0o700 });
   const reportPath = resolve(folder, 'run-' + Date.now() + '-' + randomUUID() + '.json');
   const report = { version: 1, provider: provider.name, startedAt: new Date().toISOString(),

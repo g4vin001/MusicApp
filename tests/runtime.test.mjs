@@ -5,7 +5,7 @@ import { mkdirSync,readFileSync,writeFileSync,readdirSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import ts from 'typescript';
-const output=resolve('.sites-runtime/tests');mkdirSync(output,{recursive:true});
+const output=resolve('.runtime/tests');mkdirSync(output,{recursive:true});
 writeFileSync(output+'/env.mjs','export const env=globalThis.__musicTestEnv;');
 const modules={'lib/monetization.ts':'monetization','app/ads.txt/route.ts':'ads-txt','app/api/health/route.ts':'health','lib/contracts.ts':'contracts','lib/server.ts':'server','lib/providers.ts':'providers','lib/recognition.ts':'recognition','lib/scan.ts':'scan','lib/scan-store.ts':'scan-store','lib/creator.ts':'creator','lib/creator-store.ts':'creator-store','lib/product-events.ts':'product-events','app/api/creator/route.ts':'creator-route','app/api/creator/assistant/route.ts':'assistant-route','app/api/events/route.ts':'events-route','app/api/insights/route.ts':'insights-route','app/api/scans/route.ts':'scans-route','app/api/scans/segment/route.ts':'segment-route','app/api/recognize/route.ts':'recognize','app/api/search/route.ts':'search','app/api/saved/route.ts':'saved','app/api/config/route.ts':'config'};
 for(const [path,name] of Object.entries(modules)){

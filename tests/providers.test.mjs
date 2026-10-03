@@ -5,7 +5,7 @@ import { resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import ts from 'typescript';
 
-const output = resolve('.sites-runtime/provider-tests');
+const output = resolve('.runtime/provider-tests');
 mkdirSync(output, { recursive: true });
 for (const [path, name] of [['lib/contracts.ts', 'contracts'], ['lib/providers.ts', 'providers']]) {
   const source = readFileSync(path, 'utf8').replace(/(['"])\.\/contracts\1/g, (_, quote) => quote + './contracts.mjs' + quote);

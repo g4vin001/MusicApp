@@ -1,0 +1,4 @@
+# Required to activate recognition. Enter your existing key directly in Cloudflare.
+AUDD_API_TOKEN=
+# Operator-only access to insights and tester controls. Generate a unique 32+ character secret.
+TESTER_ACCESS_KEY=

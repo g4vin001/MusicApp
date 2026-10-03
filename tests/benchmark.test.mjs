@@ -39,7 +39,7 @@ test('benchmark requires deliberate aliases and does not strip remix labels', ()
   assert.equal(benchmarkMetrics([{ expected, state: 'pending', group: 'clean' }], 0.005).overall.knownRecall, null);
 });
 test('benchmark CLI defaults to validation and refuses unbounded or public-token live calls', () => {
-  const base = resolve('.sites-runtime'); mkdirSync(base, { recursive: true });
+  const base = resolve('.runtime'); mkdirSync(base, { recursive: true });
   const folder = mkdtempSync(base + '/benchmark-test-');
   try {
     const wav = Buffer.alloc(44 + 22050 * 2 * 2);
