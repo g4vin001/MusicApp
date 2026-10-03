@@ -81,5 +81,15 @@ Try a small manual launch in editor/creator communities that permit tool demonst
 - No GPT key is configured at the time of this change. Integration is implemented and fixture-tested; live GPT writing remains disabled. Install the OpenAI Developers connection to configure an approved key as a server secret, enable `CREATOR_AI_ENABLED`, and perform a bounded real-response check.
 - AI defaults if enabled: 30 requests/day globally, 3/day per browser collection, 20/day per daily network hash and 100 cumulative. `CREATOR_AI_MODEL` defaults to configurable `gpt-4.1-mini`. The cumulative counter survives operation cleanup.
 - Projects/reviews use the existing anonymous browser identity and expire after seven days. Cross-device accounts/permanent archives are future scope.
-- 76 automated tests passed, including private review persistence, revision conflicts, library isolation, gaps/rejected matches, safe CSV, optional-AI concurrency/fallback/budgets and operator authorization. Type checking passed.
+- 81 automated tests passed, including private review persistence, revision conflicts, library isolation, gaps/rejected matches, safe CSV, optional-AI concurrency/fallback/budgets and operator authorization. Type checking passed.
 - Browser interaction QA is unavailable because the required browser-control capability is absent. Production build/deployment results are recorded at publication; do not claim a physical-device rehearsal or new accuracy benchmark.
+
+## Polish update
+
+- Shared navigation now highlights the current page, supports keyboard skipping, and is isolated from the heavier finder code.
+- Creator Studio uses a compact three-step workflow, a real file waveform, clear preparation states, and an in-app tester dialog.
+- Review drafts are owned by one project form. Saving includes all current project edits; notebook writes remain explicit. Unsaved changes are visible, protected before switching projects or starting another scan, and excluded from exports and report-guide requests until saved.
+- Unmatched and unsampled sections can be replayed. Handoffs can be downloaded or copied, with secondary formats separated from the primary action.
+- Notebook, metrics, help, and creator pages have consistent loading, empty, error, and responsive states.
+- Request helpers preserve caller cancellation, avoid automatic retries, and report readable recovery instructions. Public requests remain usable when session storage is blocked. Five added regression tests cover these boundaries.
+- No recognition accuracy gain, live browser QA, new payment integration, or GPT activation is claimed by this polish update.
